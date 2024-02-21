@@ -1,135 +1,122 @@
-﻿using AzureSQLConn.Database;
+﻿using AutoMapper;
+using AzureSQLConn.Database;
 using AzureSQLConn.Entities;
 using AzureSQLConn.Models;
+using AzureSQLConn.Repositories;
 using MessageBus;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.Extensions.Primitives;
 
 namespace AzureSQLConn.Controllers
 {
+    //[Authorize]
     [Route("[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
     {
         private readonly ProductDbContext _dbContext;
         private readonly IMessageBus _messageBus;
+        private readonly IProductRepository _productRepository;
+        private readonly IMapper _mapper;
 
-        public ProductsController(ProductDbContext dbContext, IMessageBus messageBus)
+        public ProductsController(ProductDbContext dbContext, IMessageBus messageBus, IProductRepository productRepository, IMapper mapper)
         {
             _dbContext = dbContext;
             _messageBus = messageBus;
+            _productRepository = productRepository;
+            _mapper = mapper;
         }
 
-        [HttpGet("GetProducts", Name = "GetProducts")]
-        public IActionResult GetProducts()
-        {
-            if(!Request.Headers.TryGetValue("SecurityToken", out StringValues headerValue))
-            {
-                return Unauthorized("APIM Token missing");
-            }
+        [HttpGet]
+        [ProducesResponseType(typeof(IEnumerable<ProductDto>), 200)]
+        public async Task<IActionResult> GetAllProducts()
+        {            
+            var products = await _productRepository.GetAllProducts();
 
-            if(headerValue.FirstOrDefault() != "pass1234")
-            {
-                return Unauthorized("APIM Token missing");
-            }
-            var products = _dbContext.Products.ToList();
-
-            return Ok(products);
+            return Ok(_mapper.Map<IEnumerable<ProductDto>>(products));
         }
 
-        [HttpGet("{id}", Name = "GetProduct")]
-        public IActionResult GetProduct(int id)
+        [HttpGet("{id}")]
+        [ProducesResponseType(typeof(ProductDto), 200)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> GetProductById(int id)
         {
-            var product = _dbContext.Products.SingleOrDefault(p => p.Id == id);
+            var product = await _productRepository.GetProductById(id);
             if(product == null)
             {
                 return NotFound();
             }
-            return Ok(product);
+            return Ok(_mapper.Map<ProductDto>(product));
         }
 
-        [HttpPost(Name = "Create")]
-        public async Task<IActionResult> Create([FromBody] ProductDto product)
+        [HttpPost]
+        [ProducesResponseType(201)]
+        [ProducesResponseType(400)]
+        public async Task<IActionResult> AddProduct([FromBody] ProductDto productDto)
         {
-            if (product == null)
+            if (productDto == null)
             {
                 return BadRequest();
             }
 
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-            //var maxId = _dbContext.Products.Max(x => x.Id);
-            var newProduct = new Product()
-            {               
-                Name = product.Name,
-                Description = product.Description,
-                AvailableStock = product.AvailableStock,
-                Price = product.Price,
-                CategoryId = product.CategoryId
-            };
-            _dbContext.Products.Add(newProduct);
-            _dbContext.SaveChanges();
-            await _messageBus.PublishMessage(newProduct, "productqueue");
-            return Ok(newProduct);
-        }
+            var product = _mapper.Map<Product>(productDto);
 
-        [HttpPut("{id}", Name = "Update")]
-        public IActionResult Update(int id, [FromBody] ProductDto productUpdate)
-        {
-            var product = _dbContext.Products.SingleOrDefault(x => x.Id == id);
-            if (product == null)
-            {
-                return NotFound();
-            }
-
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }           
-
-            product.Name = productUpdate.Name;
-            product.Description = productUpdate.Description;
-            product.AvailableStock = productUpdate.AvailableStock;
-            product.Price = productUpdate.Price;
-            product.CategoryId = productUpdate.CategoryId;
+            await _productRepository.AddProduct(product);
             
-            _dbContext.SaveChanges();
-
-            return NoContent();
+            await _messageBus.PublishMessage(productDto, "productqueue");
+            return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
 
-        [HttpDelete("{id}", Name = "Delete")]
-        public IActionResult Delete(int id)
-        {
-            var product = _dbContext.Products.SingleOrDefault(_ => _.Id == id);
-            if(product == null)
+        [HttpPut("{id}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> UpdateProduct(int id, [FromBody] ProductDto productDto)
+        {            
+            if (id != productDto.Id)
+            {
+                return BadRequest();
+            }
+            var existingProduct = await _productRepository.GetProductById(id);
+
+            if (existingProduct == null)
             {
                 return NotFound();
             }
 
-            _dbContext.Products.Remove(product);
-            _dbContext.SaveChanges();
+            await _productRepository.UpdateProduct(_mapper.Map<Product>(productDto));           
+
             return NoContent();
         }
 
-        [HttpGet("Search", Name = "Search")]
-        public IActionResult Search([FromQuery]string searchParam)
+        [HttpDelete("{id}")]
+        [ProducesResponseType(204)]
+        [ProducesResponseType(404)]
+        public async  Task<IActionResult> DeleteProduct(int id)
+        {
+            var existingProduct = await _productRepository.GetProductById(id);
+
+            if (existingProduct == null)
+            {
+                return NotFound();
+            }
+            _productRepository.DeleteProduct(existingProduct);
+            return NoContent();
+        }
+
+        [HttpGet("Search")]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(typeof(ProductDto), 200)]
+        public async Task<IActionResult> Search([FromQuery]string searchParam)
         {
             
             if (string.IsNullOrEmpty(searchParam))
             {
-                return Ok(_dbContext.Products.ToList());
+                return BadRequest();
             }
 
-            var searchResults = _dbContext.Products.Where(p => p.Name.ToLower().Contains(searchParam.ToLower())).ToList();
+            var products = await _productRepository.Search(searchParam.ToLower());
 
-            return Ok(searchResults);
+            return Ok(_mapper.Map<List<ProductDto>>(products));
         }
     }
 }
