@@ -12,7 +12,7 @@ namespace MessageBus
 {
     public class MessageBus : IMessageBus
     {
-        private string connString = "Endpoint=sb://azsrvcbus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=N7mJGz3EKZIvzt7CZ4cRzf31eqazq1HWB+ASbKymWPE=";
+        private string connString = "Endpoint=sb://azsrvcbus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=eUppXrFJSkAtVtj13TUP7cfxMMFuciWGZ+ASbKL3jnk=";
         public async Task PublishMessage(object message, string topic_queue_name)
         {
             await using var client = new ServiceBusClient(connString);

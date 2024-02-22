@@ -17,13 +17,15 @@ namespace AzureSQLConn.Controllers
         private readonly IMessageBus _messageBus;
         private readonly IProductRepository _productRepository;
         private readonly IMapper _mapper;
+        private readonly IConfiguration _configuration;
 
-        public ProductsController(ProductDbContext dbContext, IMessageBus messageBus, IProductRepository productRepository, IMapper mapper)
+        public ProductsController(ProductDbContext dbContext, IMessageBus messageBus, IProductRepository productRepository, IMapper mapper, IConfiguration configuration)
         {
             _dbContext = dbContext;
             _messageBus = messageBus;
             _productRepository = productRepository;
             _mapper = mapper;
+            _configuration = configuration;
         }
 
         [HttpGet]
@@ -62,7 +64,7 @@ namespace AzureSQLConn.Controllers
 
             await _productRepository.AddProduct(product);
             
-            await _messageBus.PublishMessage(productDto, "productqueue");
+            await _messageBus.PublishMessage(productDto, _configuration["MessageBus:QueueName"]);
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
 
