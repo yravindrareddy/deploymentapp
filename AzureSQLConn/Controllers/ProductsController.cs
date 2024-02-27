@@ -4,11 +4,13 @@ using AzureSQLConn.Entities;
 using AzureSQLConn.Models;
 using AzureSQLConn.Repositories;
 using MessageBus;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace AzureSQLConn.Controllers
 {
-    //[Authorize]
+    [Authorize]
     [Route("[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -17,7 +19,7 @@ namespace AzureSQLConn.Controllers
         private readonly IMessageBus _messageBus;
         private readonly IProductRepository _productRepository;
         private readonly IMapper _mapper;
-        private readonly IConfiguration _configuration;
+        private readonly IConfiguration _configuration;    
 
         public ProductsController(ProductDbContext dbContext, IMessageBus messageBus, IProductRepository productRepository, IMapper mapper, IConfiguration configuration)
         {
@@ -25,15 +27,26 @@ namespace AzureSQLConn.Controllers
             _messageBus = messageBus;
             _productRepository = productRepository;
             _mapper = mapper;
-            _configuration = configuration;
+            _configuration = configuration;           
         }
 
         [HttpGet]
         [ProducesResponseType(typeof(IEnumerable<ProductDto>), 200)]
         public async Task<IActionResult> GetAllProducts()
-        {            
-            var products = await _productRepository.GetAllProducts();
-
+        {
+            //var data = await _connectionMultiplexer.GetDatabase().StringGetAsync(new RedisKey("products"));
+            //if (string.IsNullOrEmpty(data))
+            //{
+            //    var products = await _productRepository.GetAllProducts();
+            //    await _connectionMultiplexer.GetDatabase().StringSetAsync(new RedisKey("products"),
+            //       JsonSerializer.Serialize(products), TimeSpan.FromSeconds(60));
+            //    return Ok(_mapper.Map<IEnumerable<ProductDto>>(products));
+            //} else
+            //{
+            //    var products = JsonSerializer.Deserialize<IEnumerable<Product>>(data);                
+            //    return Ok(_mapper.Map<IEnumerable<ProductDto>>(products));
+            //}
+            var products = await _productRepository.GetAllProducts();            
             return Ok(_mapper.Map<IEnumerable<ProductDto>>(products));
         }
 

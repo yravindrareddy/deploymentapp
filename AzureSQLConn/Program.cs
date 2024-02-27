@@ -24,7 +24,7 @@ namespace AzureSQLConn
             });
             builder.Services.AddAuthentication("Bearer").AddJwtBearer(options =>
             {
-                options.Audience = "api://23878819-7db5-44a1-ae2e-9e98c2e71e04";
+                options.Audience = "api://b5652012-1efb-4c6f-8cef-4e35d6ca33c6";
                 options.Authority = "https://login.microsoftonline.com/e504ade5-ffda-4c8d-ae63-7fdd2d273a8c";
             });
             builder.Services.AddScoped<IMessageBus, MessageBus.MessageBus>();
