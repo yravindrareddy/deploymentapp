@@ -8,6 +8,7 @@ namespace AzureSQLConn.Database
     public class ProductDbContext : DbContext
     {
         private readonly IConfiguration _configuration;
+        private static bool IsSqlServer = false;
 
         public ProductDbContext(DbContextOptions<ProductDbContext> options, IConfiguration configuration) : base(options)
         {
@@ -17,15 +18,11 @@ namespace AzureSQLConn.Database
         public DbSet<Product> Products { get; set; }
         public DbSet<Category> Categories { get; set; }
         public DbSet<Inventory> Inventory { get; set; }
-
-        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        {
-            optionsBuilder.UseSqlServer(_configuration.GetConnectionString("AZURE_SQL_CONNECTIONSTRING"));
-        }
+       
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            modelBuilder.Entity<Product>().HasData(
+        {            
+           modelBuilder.Entity<Product>().HasData(
             new Product
             {
                 Id = 1,

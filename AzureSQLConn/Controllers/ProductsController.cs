@@ -10,7 +10,7 @@ using System.Text.Json;
 
 namespace AzureSQLConn.Controllers
 {
-    [Authorize]
+    //[Authorize]
     [Route("[controller]")]
     [ApiController]
     public class ProductsController : ControllerBase
@@ -77,7 +77,7 @@ namespace AzureSQLConn.Controllers
 
             await _productRepository.AddProduct(product);
             
-            await _messageBus.PublishMessage(product, _configuration["MessageBus:QueueName"]);
+            //await _messageBus.PublishMessage(product, _configuration["MessageBus:QueueName"]);
             return CreatedAtAction(nameof(GetProductById), new { id = product.Id }, product);
         }
 
